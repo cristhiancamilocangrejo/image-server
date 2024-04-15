@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  localstack:
+    container_name: "${LOCALSTACK_DOCKER_NAME:-localstack-main}"
+    image: localstack/localstack:s3-latest
+    ports:
+      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+    environment:
+      - DEBUG=${DEBUG:-0}
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./init-s3.py:/etc/localstack/init/ready.d/init-s3.py"
+  mongo:
+    image: mongo
+    restart: always
+    command: mongod --auth
+    ports:
+      - "127.0.0.1:27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: test
+      MONGO_INITDB_DATABASE: logs
+    volumes:
+      - mongodbdata:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
+  image-service-configuration:
+    image: image-server-configuration
+    ports:
+      - "127.0.0.1:8090:8090"
+
+  backend-service:
+    image: backend-service
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - image-service-configuration
+    environment:
+      - >
+        CATALINA_OPTS=
+        -Dspring.profiles.active=local
+
+volumes:
+  mongodbdata:
+    driver: local
