@@ -1,4 +1,4 @@
-/mvnw clean install
+./mvnw clean install
 
  docker build -f configuration/Dockerfile -t image-server-configuration .
 
